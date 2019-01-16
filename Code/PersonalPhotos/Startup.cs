@@ -1,7 +1,11 @@
-﻿using Core.Interfaces;
+﻿using System.Reflection;
+using Core.Interfaces;
 using Core.Services;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
+using Microsoft.AspNetCore.Identity;
+using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using PersonalPhotos.Filters;
@@ -20,6 +24,9 @@ namespace PersonalPhotos
         // This method gets called by the runtime. Use this method to add services to the container.
         public void ConfigureServices(IServiceCollection services)
         {
+            var connectionString = Configuration.GetConnectionString("Default");
+            var currentAssemblyName = Assembly.GetExecutingAssembly().GetName().Name;
+
             services.AddMvc();
             services.AddSession();
             services.AddScoped<ILogins, SqlServerLogins>();
@@ -27,6 +34,40 @@ namespace PersonalPhotos
             services.AddScoped<IPhotoMetaData, SqlPhotoMetaData>();
             services.AddScoped<IFileStorage, LocalFileStorage>();
             services.AddScoped<LoginAttribute>();
+            services.AddDbContext<IdentityDbContext>(options => {
+                options.UseSqlServer(connectionString, obj => {
+                    obj.MigrationsAssembly(currentAssemblyName);
+                });
+            });
+        
+            services.AddIdentity<IdentityUser, IdentityRole>(options =>
+            {
+                options.Password = new PasswordOptions
+                {
+                    RequireDigit = false,
+                    RequiredLength = 4,
+                    RequiredUniqueChars = 4,
+                    RequireUppercase = true
+                };
+                options.User = new UserOptions
+                {
+                    RequireUniqueEmail = true
+                };
+                options.SignIn = new SignInOptions
+                {
+                    RequireConfirmedEmail = false,
+                    RequireConfirmedPhoneNumber = false
+                };
+                options.Lockout = new LockoutOptions
+                {
+                    AllowedForNewUsers = false,
+                    DefaultLockoutTimeSpan = new System.TimeSpan(0,15,0),
+                    MaxFailedAccessAttempts = 3
+                };
+            })
+            .AddEntityFrameworkStores<IdentityDbContext>()
+            .AddDefaultTokenProviders();
+
         }
 
         // This method gets called by the runtime. Use this method to configure the HTTP request pipeline.
