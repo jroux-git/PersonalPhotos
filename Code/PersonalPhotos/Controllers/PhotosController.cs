@@ -1,6 +1,7 @@
 ﻿using System.IO;
 using System.Threading.Tasks;
 using Core.Interfaces;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using PersonalPhotos.Filters;
@@ -8,6 +9,7 @@ using PersonalPhotos.Models;
 
 namespace PersonalPhotos.Controllers
 {
+    
     public class PhotosController : Controller
     {
         private readonly IFileStorage _fileStorage;
@@ -24,14 +26,16 @@ namespace PersonalPhotos.Controllers
             _fileStorage = fileStorage;
         }
 
-        [ServiceFilter(typeof(LoginAttribute))]
+        //[ServiceFilter(typeof(LoginAttribute))]
+        [Authorize(policy: "EditorOver18Policy")]
         public IActionResult Upload()
         {
             return View();
         }
 
         [HttpPost]
-        [ServiceFilter(typeof(LoginAttribute))]
+        [Authorize(policy: "EditorOver18Policy")]
+        //[ServiceFilter(typeof(LoginAttribute))]
         public async Task<IActionResult> Upload(PhotoUploadViewModel model)
         {
             if (ModelState.IsValid)
@@ -46,10 +50,12 @@ namespace PersonalPhotos.Controllers
             return RedirectToAction("Display");
         }
 
-        [ServiceFilter(typeof(LoginAttribute))]
+        [Authorize]
+        //[ServiceFilter(typeof(LoginAttribute))]
         public IActionResult Display()
         {
-            var userName = _httpContextAccessor.HttpContext.Session.GetString("User");
+            //var userName = _httpContextAccessor.HttpContext.Session.GetString("User");
+            var userName = User.Identity.Name;
             return View("Display", userName);
         }
     }

@@ -9,6 +9,8 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using PersonalPhotos.Filters;
+using PersonalPhotos.Interfaces;
+using PersonalPhotos.Services;
 
 namespace PersonalPhotos
 {
@@ -34,6 +36,8 @@ namespace PersonalPhotos
             services.AddScoped<IPhotoMetaData, SqlPhotoMetaData>();
             services.AddScoped<IFileStorage, LocalFileStorage>();
             services.AddScoped<LoginAttribute>();
+            services.Configure<EmailOptions>(Configuration.GetSection("Email"));
+
             services.AddDbContext<IdentityDbContext>(options => {
                 options.UseSqlServer(connectionString, obj => {
                     obj.MigrationsAssembly(currentAssemblyName);
@@ -68,6 +72,20 @@ namespace PersonalPhotos
             .AddEntityFrameworkStores<IdentityDbContext>()
             .AddDefaultTokenProviders();
 
+            services.ConfigureApplicationCookie(options =>
+            {
+                options.LoginPath = "/Logins/Index";
+            });
+
+            services.AddAuthorization(options =>
+            {
+                options.AddPolicy("EditorOver18Policy", policy =>
+                {
+                    policy.RequireClaim("Over18Claim");//.RequireRole("Editor");
+                });
+            });
+
+            services.AddSingleton<IEmail, SmtpEmail>();
         }
 
         // This method gets called by the runtime. Use this method to configure the HTTP request pipeline.
@@ -83,8 +101,10 @@ namespace PersonalPhotos
                 app.UseExceptionHandler("/Home/Error");
             }
 
+            app.UseAuthentication();
             app.UseStaticFiles();
             app.UseSession();
+            app.UseAuthentication();
             app.UseMvc(routes =>
             {
                 routes.MapRoute(

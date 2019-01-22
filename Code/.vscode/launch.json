@@ -6,6 +6,7 @@
     "configurations": [
         {
             "name": ".NET Core Launch (web)",
+            "requireExactSource": false,
             "type": "coreclr",
             "request": "launch",
             "preLaunchTask": "build",
