@@ -1,0 +1,26 @@
+@model MfaCreateViewModel
+
+@{
+    ViewData["Title"] = "Setup 2FA";
+}
+
+<h2>Setup 2-Factor Authentication</h2>
+
+<div class="container">
+    <div class="row">
+        <div class="panel-heading">
+            <span class="info">Setup 2FA with Microsoft Authenticator using this code: @Model.AuthKey</span>
+        </div>
+            <div class="panel-body">
+                @Html.ValidationSummary()
+                <form method="post" asp-action="Setup2Fa" asp-controller="Logins">
+                        <div>
+                            <label for="MfaCode">Enter 2FA Code:</label>
+                            <input type="text" id="MfaCode" asp-for="Code" class="form-control" />
+                    </div>
+                    <br />
+                    <input type="submit" value="Complete Setup!" class="btn btn-primary" />
+                </form>
+        </div>
+    </div>
+</div>

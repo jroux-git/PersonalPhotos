@@ -1,5 +1,7 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using System.Security.Claims;
+using System.Text;
 using System.Threading.Tasks;
 using Core.Interfaces;
 using Microsoft.AspNetCore.Authorization;
@@ -137,7 +139,14 @@ namespace PersonalPhotos.Controllers
 
             if (confirm.Succeeded)
             {
-                return RedirectToAction("Login");
+                var is2FaEnabled = await _userManager.GetTwoFactorEnabledAsync(user);
+
+                if (!is2FaEnabled)
+                {
+                    return RedirectToAction("Setup2Fa");
+                }
+
+                return RedirectToAction("Index", "Login");
             }
 
             ViewBag["Error"] = "Error validating email address";
@@ -206,6 +215,74 @@ namespace PersonalPhotos.Controllers
 
             ModelState.AddModelError("", "Invalid user details");
             return View(model);
+        }
+
+        public async Task<IActionResult> Setup2Fa()
+        {
+            var user = await _userManager.GetUserAsync(User);
+
+            if (user != null)
+            {
+                var authKey = await _userManager.GetAuthenticatorKeyAsync(user);
+
+                if (string.IsNullOrEmpty(authKey))
+                {
+                    await _userManager.ResetAuthenticatorKeyAsync(user);
+                    authKey = await _userManager.GetAuthenticatorKeyAsync(user);
+                }
+
+                var model = new MfaCreateViewModel()
+                {
+                    //AuthKey = FormatAuthKey(authKey)
+                    AuthKey = authKey
+                };
+
+                return View(model);
+            }
+
+            return View();
+        }
+
+        [Authorize]
+        [HttpPost]
+        public async Task<IActionResult> Setup2Fa(MfaCreateViewModel model)
+        {
+            if (!ModelState.IsValid)
+            {
+                return View(model);
+            }
+
+            var user = await _userManager.GetUserAsync(User);
+
+            var isTokenCorrect = await _userManager.VerifyTwoFactorTokenAsync(user, _userManager.Options.Tokens.AuthenticatorTokenProvider, model.Code);
+
+            if (!isTokenCorrect)
+            {
+                ModelState.AddModelError("", "The code did not match the authkey!");
+                
+                return View(model);
+            }
+
+            // enable 2FA for a user after successful validation
+            await _userManager.SetTwoFactorEnabledAsync(user, true);
+
+            return RedirectToAction("Index", "Logins");
+        }
+
+        [Authorize]
+        private string FormatAuthKey(string authKey)
+        {
+            const int chunkLen = 5;
+            var sb = new StringBuilder();
+
+            while (authKey.Length > 0)
+            {
+                var len = chunkLen > authKey.Length ? authKey.Length : chunkLen;
+                sb.Append(authKey.Substring(0, len));
+                authKey = authKey.Remove(0, len);
+            }
+
+            return sb.ToString();
         }
     }
 }
