@@ -1,6 +1,12 @@
-﻿@model LoginViewModel
+﻿@using Microsoft.AspNetCore.Identity
+@model LoginViewModel
+@inject SignInManager<IdentityUser> SignInManager
 @{
     ViewData["Title"] = "Login";
+}
+
+@{
+    var allProviders = (await SignInManager.GetExternalAuthenticationSchemesAsync()).ToList();
 }
 
 <h2>Login to use your personal photos portal!</h2>
@@ -34,6 +40,15 @@
                 </div>
 
                 <input type="submit" class="btn btn-default" value="Login!" />
+            </form>
+        </div>
+        <div class="col-md-4">
+            <form method="Post" asp-action="ExternalLogin" asp-controller="Logins" class="form-horizontal">
+                @foreach (var provider in allProviders)
+                {
+                    <button type="submit" class="btn btn-default" name="provider" value="@provider.Name"
+                    title="Login using @provider.DisplayName">@provider.Name</button>
+                }
             </form>
         </div>
     </div>

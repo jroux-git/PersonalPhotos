@@ -60,6 +60,11 @@ namespace PersonalPhotos.Controllers
 
             if (!result.Succeeded)
             {
+                if (result == Microsoft.AspNetCore.Identity.SignInResult.TwoFactorRequired)
+                {
+                    return RedirectToAction("MfaLogin");
+                }
+
                 ModelState.AddModelError("", "Username and/or Password is incorrect");
                 return View();
             }
@@ -283,6 +288,62 @@ namespace PersonalPhotos.Controllers
             }
 
             return sb.ToString();
+        }
+
+        public async Task<IActionResult> MfaLogin()
+        {
+            return View();
+        }
+
+        [HttpPost]
+        public async Task<IActionResult> MfaLogin(MfaLoginViewModel model)
+        { 
+            if (!ModelState.IsValid)
+            {
+                return View(model);
+            }
+
+            var result = await _signInManager.TwoFactorSignInAsync(_userManager.Options.Tokens.AuthenticatorTokenProvider, model.Code, true, true);
+
+            if (!result.Succeeded)
+            {
+                ModelState.AddModelError("", "Your code could not be validated, please try again");
+                return View(model);
+            }
+
+            return RedirectToAction("Index", "Logins");
+        }
+
+        [HttpPost]
+        public async Task<IActionResult> ExternalLogin(string provider, string returnUrl)
+        {
+            var redirectUrl = Url.Action("ExternalLoginCallback", "Logins", new { returnUrl });
+            var properties = _signInManager.ConfigureExternalAuthenticationProperties(provider, redirectUrl);
+
+            return Challenge(properties, provider);
+        }
+
+        public async Task<IActionResult> ExternalLoginCallback(string returnUrl=null, string remoteError=null)
+        {
+            if (remoteError != null)
+            {
+                return RedirectToAction("Index");
+            }
+            
+            var info = await _signInManager.GetExternalLoginInfoAsync();
+            if (info != null)
+            {
+                return RedirectToAction("Index");
+            }
+
+            var result = await _signInManager.ExternalLoginSignInAsync(info.LoginProvider, info.ProviderKey, true, true);
+
+            if (result.Succeeded)
+            {
+                return RedirectToAction("Index", "Home");
+            }
+
+            return View();
         }
     }
 }

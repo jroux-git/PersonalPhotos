@@ -86,6 +86,14 @@ namespace PersonalPhotos
             });
 
             services.AddSingleton<IEmail, SmtpEmail>();
+            services.AddAuthentication().AddFacebook(options => {
+                options.AppId = Configuration.GetSection("Facebook").GetValue<string>("AppId");
+                options.AppSecret = Configuration.GetSection("Facebook").GetValue<string>("AppSecret");
+            })
+            .AddGoogle(options => {
+                options.ClientId = Configuration.GetSection("Google").GetValue<string>("ClientId");
+                options.ClientSecret = Configuration.GetSection("Google").GetValue<string>("ClientSecret");
+            });
         }
 
         // This method gets called by the runtime. Use this method to configure the HTTP request pipeline.
